@@ -3,601 +3,775 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Time Tracker</title>
-  <style>
-    :root {
-      --bg: #f6f7f9;
-      --panel: #ffffff;
-      --border: #d9dde3;
-      --text: #1c2128;
-      --muted: #626b76;
-      --accent: #2f6feb;
-      --accent-text: #ffffff;
-      --danger: #b3372f;
-      --running: #1f8b4c;
-      --radius: 8px;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #14171c;
-        --panel: #1c2027;
-        --border: #333a44;
-        --text: #e6e9ee;
-        --muted: #9aa3b0;
-        --accent: #4b83f0;
-        --accent-text: #ffffff;
-        --danger: #e56a62;
-        --running: #4cc38a;
-      }
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 2rem 1rem 4rem;
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    }
-
-    main {
-      max-width: 46rem;
-      margin: 0 auto;
-    }
-
-    h1 {
-      font-size: 1.5rem;
-      margin: 0 0 1.25rem;
-    }
-
-    h2 {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--muted);
-      margin: 1.75rem 0 0.5rem;
-    }
-
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem;
-    }
-
-    .tracker {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      align-items: center;
-    }
-
-    input[type="text"], input[type="datetime-local"] {
-      flex: 1 1 14rem;
-      min-width: 0;
-      padding: 0.55rem 0.7rem;
-      font: inherit;
-      color: var(--text);
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-    }
-
-    input:focus-visible, button:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 1px;
-    }
-
-    button {
-      padding: 0.55rem 1rem;
-      font: inherit;
-      font-weight: 600;
-      color: var(--accent-text);
-      background: var(--accent);
-      border: 1px solid transparent;
-      border-radius: var(--radius);
-      cursor: pointer;
-    }
-
-    button.secondary {
-      color: var(--text);
-      background: transparent;
-      border-color: var(--border);
-      font-weight: 400;
-    }
-
-    button.link {
-      padding: 0.15rem 0.35rem;
-      color: var(--muted);
-      background: none;
-      border: none;
-      font-weight: 400;
-      font-size: 0.85rem;
-    }
-
-    button.link:hover { color: var(--text); }
-    button.link.danger:hover { color: var(--danger); }
-
-    .elapsed {
-      font-variant-numeric: tabular-nums;
-      font-size: 1.5rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      min-width: 6.5rem;
-      text-align: right;
-    }
-
-    .elapsed.running { color: var(--running); }
-
-    .hint {
-      color: var(--muted);
-      font-size: 0.85rem;
-      margin: 0.6rem 0 0;
-    }
-
-    .day {
-      margin-top: 1.25rem;
-    }
-
-    .day-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 1rem;
-      padding: 0 0.25rem 0.35rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .day-head strong { font-size: 0.95rem; }
-
-    .day-total {
-      font-variant-numeric: tabular-nums;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-
-    li.entry {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 0.75rem;
-      align-items: center;
-      padding: 0.6rem 0.25rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    li.entry .task {
-      flex: 1 1 12rem;
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
-
-    li.entry .span {
-      color: var(--muted);
-      font-size: 0.85rem;
-      font-variant-numeric: tabular-nums;
-    }
-
-    li.entry .duration {
-      font-variant-numeric: tabular-nums;
-      font-weight: 600;
-      min-width: 5rem;
-      text-align: right;
-    }
-
-    li.entry.is-running .duration { color: var(--running); }
-
-    .empty {
-      color: var(--muted);
-      padding: 1rem 0.25rem;
-    }
-
-    .summary {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-top: 1.5rem;
-      padding-top: 0.75rem;
-      border-top: 2px solid var(--border);
-      font-weight: 600;
-    }
-
-    .summary .value { font-variant-numeric: tabular-nums; }
-
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 1.25rem;
-    }
-
-    form.manual {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      align-items: center;
-      margin-top: 0.75rem;
-    }
-
-    form.manual label {
-      color: var(--muted);
-      font-size: 0.85rem;
-    }
-
-    [hidden] { display: none !important; }
-  </style>
+<title>Stopwatch Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 </head>
 <body>
-  <main>
-    <h1>Time Tracker</h1>
+<style>
+  :root {
+    --ground: #e7e8ec;
+    --panel: #fbfbfa;
+    --ink: #14161a;
+    --muted: #6c7480;
+    --rule: #d5d8de;
+    --rule-strong: #b6bbc4;
+    --sweep: #d33b28;
+    --sweep-quiet: rgba(211, 59, 40, 0.12);
+    --field: #f1f2f4;
+    --pusher: #14161a;
+    --pusher-ink: #fbfbfa;
+    --shadow: 0 1px 2px rgba(20, 22, 26, 0.06), 0 8px 24px rgba(20, 22, 26, 0.06);
 
-    <div class="panel">
-      <div class="tracker">
-        <input type="text" id="task" placeholder="What are you working on?" autocomplete="off" aria-label="Task name">
-        <span class="elapsed" id="elapsed">0:00:00</span>
-        <button type="button" id="toggle">Start</button>
-      </div>
-      <p class="hint" id="hint">Press Enter to start tracking. A running timer survives a page reload.</p>
+    --sans: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1013;
+      --panel: #181b20;
+      --ink: #e9eaee;
+      --muted: #949aa4;
+      --rule: #2a2f37;
+      --rule-strong: #3c434e;
+      --sweep: #ff6250;
+      --sweep-quiet: rgba(255, 98, 80, 0.16);
+      --field: #21252c;
+      --pusher: #e9eaee;
+      --pusher-ink: #14161a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0e1013;
+    --panel: #181b20;
+    --ink: #e9eaee;
+    --muted: #949aa4;
+    --rule: #2a2f37;
+    --rule-strong: #3c434e;
+    --sweep: #ff6250;
+    --sweep-quiet: rgba(255, 98, 80, 0.16);
+    --field: #21252c;
+    --pusher: #e9eaee;
+    --pusher-ink: #14161a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: clamp(1.5rem, 5vw, 3.5rem) 1rem 5rem;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    max-width: 44rem;
+    margin: 0 auto;
+  }
+
+  .masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---- the dial ---- */
+
+  .dial {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+  }
+
+  .readout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .elapsed {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--mono);
+    font-size: clamp(2.25rem, 9vw, 3rem);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .elapsed.running { color: var(--sweep); }
+
+  .pip {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--sweep);
+    opacity: 0;
+  }
+
+  .elapsed.running .pip {
+    opacity: 1;
+    animation: sweep 1s steps(2, jump-none) infinite;
+  }
+
+  @keyframes sweep {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0.25; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .elapsed.running .pip { animation: none; }
+  }
+
+  .controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  input[type="text"],
+  input[type="datetime-local"] {
+    flex: 1 1 13rem;
+    min-width: 0;
+    padding: 0.6rem 0.75rem;
+    font-family: var(--sans);
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--field);
+    border: 1px solid transparent;
+    border-radius: 3px;
+  }
+
+  input[type="datetime-local"] { font-family: var(--mono); font-size: 0.85rem; flex: 0 1 12rem; }
+
+  input::placeholder { color: var(--muted); }
+  input:focus { border-color: var(--rule-strong); outline: none; }
+  input:focus-visible, button:focus-visible {
+    outline: 2px solid var(--sweep);
+    outline-offset: 2px;
+  }
+
+  .pusher {
+    padding: 0.6rem 1.5rem;
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pusher-ink);
+    background: var(--pusher);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .pusher.stop { background: var(--sweep); color: #fbfbfa; }
+
+  .status {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- the ledger ---- */
+
+  .ledger { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .day { display: flex; flex-direction: column; }
+
+  .day-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  .day-head .date {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .day-head .subtotal {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+
+  li.entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.15rem 1rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  li.entry .task {
+    grid-column: 1;
+    overflow-wrap: anywhere;
+  }
+
+  li.entry .range {
+    grid-column: 2;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+
+  li.entry .duration {
+    grid-column: 3;
+    justify-self: end;
+    min-width: 5.5rem;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  li.entry.is-running .duration,
+  li.entry.is-running .range { color: var(--sweep); }
+
+  li.entry .row-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.75rem;
+    opacity: 0;
+  }
+
+  li.entry:hover .row-actions,
+  li.entry:focus-within .row-actions { opacity: 1; }
+
+  @media (hover: none) {
+    li.entry .row-actions { opacity: 1; }
+  }
+
+  .quiet {
+    padding: 0;
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .quiet:hover { color: var(--ink); }
+  .quiet.danger:hover { color: var(--sweep); }
+
+  .empty {
+    margin: 0;
+    padding: 1.5rem 0;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .grand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.75rem;
+    border-top: 3px double var(--rule-strong);
+  }
+
+  .grand .label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .grand .value {
+    font-family: var(--mono);
+    font-size: 1.35rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- utilities ---- */
+
+  .toolbar { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+
+  form.manual {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    padding: 1rem;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+  }
+
+  form.manual .lbl {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  form.manual button[type="submit"] {
+    padding: 0.5rem 1rem;
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pusher-ink);
+    background: var(--pusher);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .note {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  [hidden] { display: none !important; }
+</style>
+
+<main>
+  <div class="masthead">
+    <h1>Stopwatch Ledger</h1>
+    <span class="eyebrow" id="scope">Kept in this browser</span>
+  </div>
+
+  <section class="dial">
+    <div class="controls">
+      <input type="text" id="task" placeholder="What are you working on?" autocomplete="off" aria-label="Task name">
     </div>
+    <div class="readout">
+      <div class="elapsed" id="elapsed"><span class="pip" aria-hidden="true"></span><span id="elapsed-value">0:00:00</span></div>
+      <button type="button" class="pusher" id="toggle">Start</button>
+    </div>
+    <p class="status" id="status">Press Enter to start. A running timer survives a reload.</p>
+  </section>
 
-    <h2>Entries</h2>
+  <section class="ledger">
+    <span class="eyebrow">Entries</span>
     <div id="entries"></div>
-
-    <div class="summary">
-      <span>Total tracked</span>
+    <div class="grand">
+      <span class="label">Total tracked</span>
       <span class="value" id="total">0:00:00</span>
     </div>
+  </section>
 
-    <div class="toolbar">
-      <button type="button" class="secondary" id="add-manual">Add entry manually</button>
-      <button type="button" class="secondary" id="export">Export CSV</button>
-      <button type="button" class="secondary" id="clear">Clear all</button>
-    </div>
+  <div class="toolbar">
+    <button type="button" class="quiet" id="add-manual">Add an entry by hand</button>
+    <button type="button" class="quiet" id="export">Export CSV</button>
+    <button type="button" class="quiet danger" id="clear">Clear everything</button>
+  </div>
 
-    <form class="manual" id="manual" hidden>
-      <input type="text" id="manual-task" placeholder="Task" aria-label="Task name" required>
-      <label for="manual-start">From</label>
-      <input type="datetime-local" id="manual-start" required>
-      <label for="manual-end">to</label>
-      <input type="datetime-local" id="manual-end" required>
-      <button type="submit">Add</button>
-      <button type="button" class="secondary" id="manual-cancel">Cancel</button>
-    </form>
-  </main>
+  <form class="manual" id="manual" hidden>
+    <input type="text" id="manual-task" placeholder="Task" aria-label="Task name" required>
+    <span class="lbl">From</span>
+    <input type="datetime-local" id="manual-start" aria-label="Start time" required>
+    <span class="lbl">To</span>
+    <input type="datetime-local" id="manual-end" aria-label="End time" required>
+    <button type="submit">Add</button>
+    <button type="button" class="quiet" id="manual-cancel">Cancel</button>
+  </form>
 
-  <script>
-    (function () {
-      var STORAGE_KEY = "time-tracker/v1";
-      var state = { entries: [], running: null };
-      var ticker = null;
+  <p class="note" id="note"></p>
+</main>
 
-      var els = {
-        task: document.getElementById("task"),
-        elapsed: document.getElementById("elapsed"),
-        toggle: document.getElementById("toggle"),
-        hint: document.getElementById("hint"),
-        entries: document.getElementById("entries"),
-        total: document.getElementById("total"),
-        manual: document.getElementById("manual"),
-        manualTask: document.getElementById("manual-task"),
-        manualStart: document.getElementById("manual-start"),
-        manualEnd: document.getElementById("manual-end")
-      };
+<script>
+  (function () {
+    var STORAGE_KEY = "stopwatch-ledger/v1";
+    var state = { entries: [], running: null };
+    var ticker = null;
 
-      function load() {
-        var raw;
-        try {
-          raw = window.localStorage.getItem(STORAGE_KEY);
-        } catch (err) {
-          return;
-        }
-        if (!raw) return;
-        try {
-          var saved = JSON.parse(raw);
-          if (saved && Array.isArray(saved.entries)) {
-            state.entries = saved.entries.filter(function (entry) {
-              return entry && typeof entry.start === "number" && typeof entry.end === "number";
-            });
-          }
-          if (saved && saved.running && typeof saved.running.start === "number") {
-            state.running = { task: String(saved.running.task || ""), start: saved.running.start };
-          }
-        } catch (err) {
-          /* Corrupt payload: start clean rather than break the page. */
-        }
+    var els = {
+      task: document.getElementById("task"),
+      elapsed: document.getElementById("elapsed"),
+      elapsedValue: document.getElementById("elapsed-value"),
+      toggle: document.getElementById("toggle"),
+      status: document.getElementById("status"),
+      entries: document.getElementById("entries"),
+      total: document.getElementById("total"),
+      note: document.getElementById("note"),
+      exportBtn: document.getElementById("export"),
+      manual: document.getElementById("manual"),
+      manualTask: document.getElementById("manual-task"),
+      manualStart: document.getElementById("manual-start"),
+      manualEnd: document.getElementById("manual-end")
+    };
+
+    function load() {
+      var raw;
+      try {
+        raw = window.localStorage.getItem(STORAGE_KEY);
+      } catch (err) {
+        els.note.textContent = "This browser is blocking storage, so entries last only until you close the tab.";
+        return;
       }
-
-      function save() {
-        try {
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch (err) {
-          /* Private mode or a full quota: keep running in memory. */
-        }
-      }
-
-      function formatDuration(ms) {
-        var total = Math.max(0, Math.floor(ms / 1000));
-        var hours = Math.floor(total / 3600);
-        var minutes = Math.floor((total % 3600) / 60);
-        var seconds = total % 60;
-        return hours + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
-      }
-
-      function formatClock(ms) {
-        var date = new Date(ms);
-        return String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
-      }
-
-      function dayKey(ms) {
-        var date = new Date(ms);
-        return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
-      }
-
-      function formatDay(ms) {
-        return new Date(ms).toLocaleDateString(undefined, {
-          weekday: "long", year: "numeric", month: "short", day: "numeric"
-        });
-      }
-
-      function localInputValue(ms) {
-        var date = new Date(ms - new Date(ms).getTimezoneOffset() * 60000);
-        return date.toISOString().slice(0, 16);
-      }
-
-      function visibleEntries() {
-        var all = state.entries.slice();
-        if (state.running) {
-          all.push({ task: state.running.task, start: state.running.start, end: Date.now(), live: true });
-        }
-        return all.sort(function (a, b) { return b.start - a.start; });
-      }
-
-      function groupByDay(entries) {
-        var groups = [];
-        var index = {};
-        entries.forEach(function (entry) {
-          var key = dayKey(entry.start);
-          if (!index[key]) {
-            index[key] = { key: key, start: entry.start, entries: [], total: 0 };
-            groups.push(index[key]);
-          }
-          index[key].entries.push(entry);
-          index[key].total += entry.end - entry.start;
-        });
-        return groups;
-      }
-
-      function renderEntries() {
-        var entries = visibleEntries();
-        els.entries.textContent = "";
-
-        if (!entries.length) {
-          var empty = document.createElement("p");
-          empty.className = "empty";
-          empty.textContent = "No entries yet.";
-          els.entries.appendChild(empty);
-          els.total.textContent = formatDuration(0);
-          return;
-        }
-
-        groupByDay(entries).forEach(function (group) {
-          var section = document.createElement("section");
-          section.className = "day";
-
-          var head = document.createElement("div");
-          head.className = "day-head";
-          var name = document.createElement("strong");
-          name.textContent = formatDay(group.start);
-          var total = document.createElement("span");
-          total.className = "day-total";
-          total.textContent = formatDuration(group.total);
-          head.appendChild(name);
-          head.appendChild(total);
-          section.appendChild(head);
-
-          var list = document.createElement("ul");
-          group.entries.forEach(function (entry) {
-            list.appendChild(renderEntry(entry));
+      if (!raw) return;
+      try {
+        var saved = JSON.parse(raw);
+        if (saved && Array.isArray(saved.entries)) {
+          state.entries = saved.entries.filter(function (entry) {
+            return entry && typeof entry.start === "number" && typeof entry.end === "number";
           });
-          section.appendChild(list);
-          els.entries.appendChild(section);
+        }
+        if (saved && saved.running && typeof saved.running.start === "number") {
+          state.running = { task: String(saved.running.task || ""), start: saved.running.start };
+        }
+      } catch (err) {
+        /* Corrupt payload: start clean rather than break the page. */
+      }
+    }
+
+    function save() {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (err) {
+        els.note.textContent = "Entries could not be saved to this browser — copy anything you need before closing the tab.";
+      }
+    }
+
+    function formatDuration(ms) {
+      var total = Math.max(0, Math.floor(ms / 1000));
+      var hours = Math.floor(total / 3600);
+      var minutes = Math.floor((total % 3600) / 60);
+      var seconds = total % 60;
+      return hours + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    }
+
+    function formatClock(ms) {
+      var date = new Date(ms);
+      return String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
+    }
+
+    function dayKey(ms) {
+      var date = new Date(ms);
+      return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+    }
+
+    function formatDay(ms) {
+      return new Date(ms).toLocaleDateString(undefined, {
+        weekday: "long", month: "short", day: "numeric", year: "numeric"
+      });
+    }
+
+    function localInputValue(ms) {
+      var date = new Date(ms - new Date(ms).getTimezoneOffset() * 60000);
+      return date.toISOString().slice(0, 16);
+    }
+
+    function visibleEntries() {
+      var all = state.entries.slice();
+      if (state.running) {
+        all.push({ task: state.running.task, start: state.running.start, end: Date.now(), live: true });
+      }
+      return all.sort(function (a, b) { return b.start - a.start; });
+    }
+
+    function groupByDay(entries) {
+      var groups = [];
+      var index = {};
+      entries.forEach(function (entry) {
+        var key = dayKey(entry.start);
+        if (!index[key]) {
+          index[key] = { key: key, start: entry.start, entries: [], total: 0 };
+          groups.push(index[key]);
+        }
+        index[key].entries.push(entry);
+        index[key].total += entry.end - entry.start;
+      });
+      return groups;
+    }
+
+    function renderEntries() {
+      var entries = visibleEntries();
+      els.entries.textContent = "";
+
+      if (!entries.length) {
+        var empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "Nothing tracked yet.";
+        els.entries.appendChild(empty);
+        els.total.textContent = formatDuration(0);
+        return;
+      }
+
+      groupByDay(entries).forEach(function (group) {
+        var section = document.createElement("section");
+        section.className = "day";
+
+        var head = document.createElement("div");
+        head.className = "day-head";
+        var date = document.createElement("span");
+        date.className = "date";
+        date.textContent = formatDay(group.start);
+        var subtotal = document.createElement("span");
+        subtotal.className = "subtotal";
+        subtotal.textContent = formatDuration(group.total);
+        head.appendChild(date);
+        head.appendChild(subtotal);
+        section.appendChild(head);
+
+        var list = document.createElement("ul");
+        group.entries.forEach(function (entry) {
+          list.appendChild(renderEntry(entry));
+        });
+        section.appendChild(list);
+        els.entries.appendChild(section);
+      });
+
+      els.total.textContent = formatDuration(entries.reduce(function (sum, entry) {
+        return sum + (entry.end - entry.start);
+      }, 0));
+    }
+
+    function renderEntry(entry) {
+      var item = document.createElement("li");
+      item.className = "entry" + (entry.live ? " is-running" : "");
+
+      var task = document.createElement("span");
+      task.className = "task";
+      task.textContent = entry.task || "Untitled";
+
+      var range = document.createElement("span");
+      range.className = "range";
+      range.textContent = formatClock(entry.start) + "–" + (entry.live ? "now" : formatClock(entry.end));
+
+      var duration = document.createElement("span");
+      duration.className = "duration";
+      duration.textContent = formatDuration(entry.end - entry.start);
+
+      item.appendChild(task);
+      item.appendChild(range);
+      item.appendChild(duration);
+
+      if (!entry.live) {
+        var actions = document.createElement("span");
+        actions.className = "row-actions";
+
+        var resume = document.createElement("button");
+        resume.type = "button";
+        resume.className = "quiet";
+        resume.textContent = "Resume";
+        resume.addEventListener("click", function () {
+          if (state.running) stop();
+          start(entry.task);
         });
 
-        els.total.textContent = formatDuration(entries.reduce(function (sum, entry) {
-          return sum + (entry.end - entry.start);
-        }, 0));
-      }
-
-      function renderEntry(entry) {
-        var item = document.createElement("li");
-        item.className = "entry" + (entry.live ? " is-running" : "");
-
-        var task = document.createElement("span");
-        task.className = "task";
-        task.textContent = entry.task || "(no description)";
-
-        var span = document.createElement("span");
-        span.className = "span";
-        span.textContent = formatClock(entry.start) + "–" + (entry.live ? "now" : formatClock(entry.end));
-
-        var duration = document.createElement("span");
-        duration.className = "duration";
-        duration.textContent = formatDuration(entry.end - entry.start);
-
-        item.appendChild(task);
-        item.appendChild(span);
-        item.appendChild(duration);
-
-        if (!entry.live) {
-          var resume = document.createElement("button");
-          resume.type = "button";
-          resume.className = "link";
-          resume.textContent = "resume";
-          resume.addEventListener("click", function () {
-            if (state.running) stop();
-            start(entry.task);
-          });
-
-          var remove = document.createElement("button");
-          remove.type = "button";
-          remove.className = "link danger";
-          remove.textContent = "delete";
-          remove.addEventListener("click", function () {
-            var at = state.entries.indexOf(entry);
-            if (at > -1) state.entries.splice(at, 1);
-            save();
-            render();
-          });
-
-          item.appendChild(resume);
-          item.appendChild(remove);
-        }
-
-        return item;
-      }
-
-      function renderTracker() {
-        var running = Boolean(state.running);
-        if (running && document.activeElement !== els.task) els.task.value = state.running.task;
-        els.toggle.textContent = running ? "Stop" : "Start";
-        els.elapsed.classList.toggle("running", running);
-        els.elapsed.textContent = formatDuration(running ? Date.now() - state.running.start : 0);
-        els.hint.textContent = running
-          ? "Tracking since " + formatClock(state.running.start) + "."
-          : "Press Enter to start tracking. A running timer survives a page reload.";
-        document.title = running
-          ? els.elapsed.textContent + " · " + (state.running.task || "Time Tracker")
-          : "Time Tracker";
-      }
-
-      function render() {
-        renderTracker();
-        renderEntries();
-      }
-
-      function tick() {
-        renderTracker();
-        var live = els.entries.querySelector(".entry.is-running");
-        if (live && state.running) {
-          live.querySelector(".duration").textContent = formatDuration(Date.now() - state.running.start);
-          var day = els.entries.querySelector(".day .day-total");
-          if (day) renderEntries();
-        }
-      }
-
-      function startTicking() {
-        if (ticker === null) ticker = window.setInterval(tick, 1000);
-      }
-
-      function stopTicking() {
-        if (ticker !== null) {
-          window.clearInterval(ticker);
-          ticker = null;
-        }
-      }
-
-      function start(task) {
-        state.running = { task: (task || els.task.value).trim(), start: Date.now() };
-        els.task.value = state.running.task;
-        save();
-        render();
-        startTicking();
-      }
-
-      function stop() {
-        if (!state.running) return;
-        var entry = { task: state.running.task, start: state.running.start, end: Date.now() };
-        if (entry.end - entry.start >= 1000) state.entries.push(entry);
-        state.running = null;
-        els.task.value = "";
-        stopTicking();
-        save();
-        render();
-      }
-
-      els.toggle.addEventListener("click", function () {
-        if (state.running) stop();
-        else start();
-      });
-
-      els.task.addEventListener("keydown", function (event) {
-        if (event.key !== "Enter") return;
-        event.preventDefault();
-        if (state.running) stop();
-        else start();
-      });
-
-      document.getElementById("add-manual").addEventListener("click", function () {
-        var now = Date.now();
-        els.manual.hidden = !els.manual.hidden;
-        if (els.manual.hidden) return;
-        els.manualStart.value = localInputValue(now - 3600000);
-        els.manualEnd.value = localInputValue(now);
-        els.manualTask.focus();
-      });
-
-      document.getElementById("manual-cancel").addEventListener("click", function () {
-        els.manual.hidden = true;
-      });
-
-      els.manual.addEventListener("submit", function (event) {
-        event.preventDefault();
-        var start = new Date(els.manualStart.value).getTime();
-        var end = new Date(els.manualEnd.value).getTime();
-        if (!isFinite(start) || !isFinite(end) || end <= start) {
-          window.alert("The end time has to be after the start time.");
-          return;
-        }
-        state.entries.push({ task: els.manualTask.value.trim(), start: start, end: end });
-        els.manualTask.value = "";
-        els.manual.hidden = true;
-        save();
-        render();
-      });
-
-      document.getElementById("export").addEventListener("click", function () {
-        var rows = [["task", "start", "end", "seconds"]];
-        state.entries.slice().sort(function (a, b) { return a.start - b.start; }).forEach(function (entry) {
-          rows.push([
-            entry.task,
-            new Date(entry.start).toISOString(),
-            new Date(entry.end).toISOString(),
-            String(Math.round((entry.end - entry.start) / 1000))
-          ]);
+        var remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "quiet danger";
+        remove.textContent = "Delete";
+        remove.addEventListener("click", function () {
+          var at = state.entries.indexOf(entry);
+          if (at > -1) state.entries.splice(at, 1);
+          save();
+          render();
         });
-        var csv = rows.map(function (row) {
-          return row.map(function (cell) {
-            return '"' + String(cell).replace(/"/g, '""') + '"';
-          }).join(",");
-        }).join("\n");
-        var link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-        link.download = "time-tracker.csv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-      });
 
-      document.getElementById("clear").addEventListener("click", function () {
-        if (!window.confirm("Delete all entries and stop the running timer?")) return;
-        state = { entries: [], running: null };
-        els.task.value = "";
-        stopTicking();
-        save();
-        render();
-      });
+        actions.appendChild(resume);
+        actions.appendChild(remove);
+        item.appendChild(actions);
+      }
 
-      load();
+      return item;
+    }
+
+    function renderTracker() {
+      var running = Boolean(state.running);
+      if (running && document.activeElement !== els.task) els.task.value = state.running.task;
+      els.toggle.textContent = running ? "Stop" : "Start";
+      els.toggle.classList.toggle("stop", running);
+      els.elapsed.classList.toggle("running", running);
+      els.elapsedValue.textContent = formatDuration(running ? Date.now() - state.running.start : 0);
+      els.status.textContent = running
+        ? "Running since " + formatClock(state.running.start) + "."
+        : "Press Enter to start. A running timer survives a reload.";
+      document.title = running
+        ? els.elapsedValue.textContent + " · " + (state.running.task || "Stopwatch Ledger")
+        : "Stopwatch Ledger";
+    }
+
+    function render() {
+      renderTracker();
+      renderEntries();
+    }
+
+    function tick() {
+      renderTracker();
+      if (state.running) renderEntries();
+    }
+
+    function startTicking() {
+      if (ticker === null) ticker = window.setInterval(tick, 1000);
+    }
+
+    function stopTicking() {
+      if (ticker !== null) {
+        window.clearInterval(ticker);
+        ticker = null;
+      }
+    }
+
+    function start(task) {
+      state.running = { task: (task || els.task.value).trim(), start: Date.now() };
+      els.task.value = state.running.task;
+      save();
       render();
-      if (state.running) startTicking();
-    }());
-  </script>
+      startTicking();
+    }
+
+    function stop() {
+      if (!state.running) return;
+      var entry = { task: state.running.task, start: state.running.start, end: Date.now() };
+      if (entry.end - entry.start >= 1000) state.entries.push(entry);
+      state.running = null;
+      els.task.value = "";
+      stopTicking();
+      save();
+      render();
+    }
+
+    els.toggle.addEventListener("click", function () {
+      if (state.running) stop();
+      else start();
+    });
+
+    els.task.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      if (state.running) stop();
+      else start();
+    });
+
+    document.getElementById("add-manual").addEventListener("click", function () {
+      var now = Date.now();
+      els.manual.hidden = !els.manual.hidden;
+      if (els.manual.hidden) return;
+      els.manualStart.value = localInputValue(now - 3600000);
+      els.manualEnd.value = localInputValue(now);
+      els.manualTask.focus();
+    });
+
+    document.getElementById("manual-cancel").addEventListener("click", function () {
+      els.manual.hidden = true;
+      els.note.textContent = "";
+    });
+
+    els.manual.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var from = new Date(els.manualStart.value).getTime();
+      var to = new Date(els.manualEnd.value).getTime();
+      if (!isFinite(from) || !isFinite(to) || to <= from) {
+        els.note.textContent = "That entry ends before it starts — set the end time after the start time.";
+        return;
+      }
+      state.entries.push({ task: els.manualTask.value.trim(), start: from, end: to });
+      els.manualTask.value = "";
+      els.manual.hidden = true;
+      els.note.textContent = "";
+      save();
+      render();
+    });
+
+    function toCsv() {
+      var rows = [["task", "start", "end", "seconds"]];
+      state.entries.slice().sort(function (a, b) { return a.start - b.start; }).forEach(function (entry) {
+        rows.push([
+          entry.task,
+          new Date(entry.start).toISOString(),
+          new Date(entry.end).toISOString(),
+          String(Math.round((entry.end - entry.start) / 1000))
+        ]);
+      });
+      return rows.map(function (row) {
+        return row.map(function (cell) {
+          return '"' + String(cell).replace(/"/g, '""') + '"';
+        }).join(",");
+      }).join("\n");
+    }
+
+    els.exportBtn.addEventListener("click", function () {
+      if (!state.entries.length) {
+        els.note.textContent = "There are no finished entries to export yet.";
+        return;
+      }
+      els.note.textContent = "";
+      var link = document.createElement("a");
+      link.href = URL.createObjectURL(new Blob([toCsv()], { type: "text/csv" }));
+      link.download = "stopwatch-ledger.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    });
+
+    document.getElementById("clear").addEventListener("click", function () {
+      if (!window.confirm("Delete every entry and stop the running timer?")) return;
+      state = { entries: [], running: null };
+      els.task.value = "";
+      els.note.textContent = "";
+      stopTicking();
+      save();
+      render();
+    });
+
+    load();
+    render();
+    if (state.running) startTicking();
+
+  }());
+</script>
 </body>
 </html>
