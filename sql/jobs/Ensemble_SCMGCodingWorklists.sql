@@ -2,7 +2,7 @@
   Ensemble_SCMGCodingWorklists.sql
   Server  : schcent20db01
   Creates : SQL Agent job "Ensemble_SCMGCodingWorklists"
-  Modeled : on the existing job "EnsembleVisitOwner"
+  Modeled : on the existing job "JK_EnsembleVisitOwner"
 
   What it does
   ------------
@@ -34,7 +34,7 @@ SET NOCOUNT ON;
   SETTINGS
 ==============================================================================*/
 DECLARE @JobName        sysname       = N'Ensemble_SCMGCodingWorklists',
-        @SourceJob      sysname       = N'EnsembleVisitOwner',
+        @SourceJob      sysname       = N'JK_EnsembleVisitOwner',
         @Recipients     nvarchar(max) = N'kotrozo@gmail.com',
         @JobEnabled     tinyint       = 1,   -- 1 = job runs on schedule
         @ReplaceExisting bit          = 0,   -- 1 = drop + recreate if it exists
@@ -58,6 +58,18 @@ DECLARE @SrcCmd       nvarchar(max),
         @SrcOwner     sysname,
         @q1           int,
         @q2           int;
+
+/* tolerate a prefix/rename on the source job */
+IF NOT EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = @SourceJob)
+   AND (SELECT COUNT(*) FROM msdb.dbo.sysjobs WHERE name LIKE N'%EnsembleVisitOwner%') = 1
+BEGIN
+    SELECT @SourceJob = name FROM msdb.dbo.sysjobs WHERE name LIKE N'%EnsembleVisitOwner%';
+    PRINT N'Source job resolved to "' + @SourceJob + N'".';
+END
+
+IF NOT EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = @SourceJob)
+    PRINT N'WARNING: source job "' + @SourceJob
+        + N'" not found - nothing to inherit; the OVERRIDES block must supply the settings.';
 
 SELECT TOP (1)
         @SrcDb  = NULLIF(s.database_name, N''),

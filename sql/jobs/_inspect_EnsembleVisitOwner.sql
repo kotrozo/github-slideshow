@@ -13,7 +13,16 @@ GO
 
 SET NOCOUNT ON;
 
-DECLARE @SourceJob sysname = N'EnsembleVisitOwner';
+DECLARE @SourceJob sysname = N'JK_EnsembleVisitOwner';
+
+/* tolerate a prefix/rename: if the exact name is gone but exactly one job
+   matches, use that one instead of failing */
+IF NOT EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = @SourceJob)
+   AND (SELECT COUNT(*) FROM msdb.dbo.sysjobs WHERE name LIKE N'%EnsembleVisitOwner%') = 1
+BEGIN
+    SELECT @SourceJob = name FROM msdb.dbo.sysjobs WHERE name LIKE N'%EnsembleVisitOwner%';
+    PRINT N'Exact name not found; using "' + @SourceJob + N'" instead.';
+END
 
 IF NOT EXISTS (SELECT 1 FROM msdb.dbo.sysjobs WHERE name = @SourceJob)
 BEGIN
