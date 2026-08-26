@@ -18,25 +18,40 @@ clone → edit → deploy → create job.
 
 The new job inherits all of the above.
 
-## 1. Get the existing project
+## 1. Get the existing project into Visual Studio
 
-Either the GUI:
+If the project is already in source control, use that copy — it has the
+original `.dtproj` and is the best starting point. Otherwise:
 
-> SSMS → Integration Services Catalogs → SSISDB → EDJobs → Projects →
-> right-click **EnsembleVisitOwner** → **Export…**
+> **File → New → Project → "Integration Services Import Project Wizard"**
 
-or `Export-SsisProject.ps1` in this folder:
+An `.ispac` cannot be opened directly — it's a deployment artifact, not a
+project file. This wizard converts one back into an editable project. It
+accepts either source:
 
-```powershell
-.\Export-SsisProject.ps1 -OutFile C:\temp\EnsembleVisitOwner.ispac
-```
+- **Integration Services Catalog** — point it at `schcent20db01`, folder
+  `EDJobs`, project `EnsembleVisitOwner`. No export needed.
+- **Project deployment file** — an `.ispac` you exported first, via SSMS
+  (Integration Services Catalogs → SSISDB → EDJobs → Projects → right-click
+  → **Export…**) or `Export-SsisProject.ps1` in this folder:
 
-If the project is already in source control, use that copy instead — it will
-have the original `.dtproj` and is the better starting point.
+  ```powershell
+  .\Export-SsisProject.ps1 -OutFile C:\temp\EnsembleVisitOwner.ispac
+  ```
+
+Since the wizard reads the catalog directly, the export is only worth doing
+to keep a backup of the original before you start.
+
+Requires the **SQL Server Integration Services Projects** extension (VS
+Marketplace, for VS 2019/2022) or SSDT on older versions — without it the
+project template does not exist.
+
+To just read an `.ispac` without Visual Studio: it's a zip. Copy it, rename
+to `.zip` and extract — you get the `.dtsx` files, `Project.params` and
+`@Project.manifest` as plain XML. Fine for inspection; don't edit and re-zip
+for this job, since renaming the project properly means editing the manifest.
 
 ## 2. Clone and rename
-
-Open the project in SSDT/Visual Studio, then:
 
 - Save the **project** as `Ensemble_SCMGCodingWorklists`
 - Rename the **package** to `Ensemble_SCMGCodingWorklists.dtsx`
