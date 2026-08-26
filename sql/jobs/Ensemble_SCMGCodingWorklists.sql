@@ -9,6 +9,15 @@
   One TSQL step that calls msdb.dbo.sp_send_dbmail, running the SCMG coding
   worklist query and attaching the result as a dated .csv.
 
+  NOTE ON "MODELED ON"
+  --------------------
+  JK_EnsembleVisitOwner is an SSIS job - its step runs a package from
+  \SSISDB\EDJobs\EnsembleVisitOwner. This job is NOT an SSIS package; it does
+  the same work directly in T-SQL, which needs no package build or deployment.
+  What it does inherit from the source job is everything at the Agent level:
+  schedule (weekly Mon 04:00), owner, category, failure alert operator, and
+  the Database Mail profile.
+
   Before you run it
   -----------------
   1. Run _inspect_EnsembleVisitOwner.sql and read the output.
@@ -57,6 +66,9 @@ DECLARE @SrcCmd       nvarchar(max),
         @SrcProfile   sysname,
         @SrcCategory  sysname,
         @SrcOwner     sysname,
+        @SrcOperator  sysname,
+        @SrcNotifyEmail    tinyint,
+        @SrcNotifyEventlog tinyint,
         @q1           int,
         @q2           int;
 
@@ -81,11 +93,20 @@ WHERE   j.name = @SourceJob
   AND   s.command LIKE N'%sp_send_dbmail%'
 ORDER BY s.step_id;
 
-SELECT  @SrcCategory = c.name,
-        @SrcOwner    = SUSER_SNAME(j.owner_sid)
+SELECT  @SrcCategory       = c.name,
+        @SrcOwner          = SUSER_SNAME(j.owner_sid),
+        @SrcOperator       = o.name,
+        @SrcNotifyEmail    = j.notify_level_email,
+        @SrcNotifyEventlog = j.notify_level_eventlog
 FROM    msdb.dbo.sysjobs        j
 LEFT JOIN msdb.dbo.syscategories c ON c.category_id = j.category_id
+LEFT JOIN msdb.dbo.sysoperators  o ON o.id          = j.notify_email_operator_id
 WHERE   j.name = @SourceJob;
+
+/* an operator alert on failure is only valid if the operator resolved */
+IF @SrcOperator IS NULL SET @SrcNotifyEmail = 0;
+SET @SrcNotifyEmail    = ISNULL(@SrcNotifyEmail, 0);
+SET @SrcNotifyEventlog = ISNULL(@SrcNotifyEventlog, 2);
 
 /*-- pull the literal that follows @profile_name = out of the source command --*/
 IF @SrcCmd IS NOT NULL
@@ -131,7 +152,14 @@ IF @SrcProfile IS NOT NULL
 IF @SrcDb IS NOT NULL AND DB_ID(@SrcDb) IS NULL
     SET @SrcDb = NULL;
 
-/* if only one mail profile exists on the instance, it is unambiguous */
+/* an SSIS source job has no @profile_name to parse, so fall back to the
+   instance default profile, then to the only profile if there is just one */
+IF @SrcProfile IS NULL
+    SELECT TOP (1) @SrcProfile = p.name
+    FROM   msdb.dbo.sysmail_profile            p
+    JOIN   msdb.dbo.sysmail_principalprofile  pp ON pp.profile_id = p.profile_id
+    WHERE  pp.is_default = 1;
+
 IF @SrcProfile IS NULL AND (SELECT COUNT(*) FROM msdb.dbo.sysmail_profile) = 1
     SELECT @SrcProfile = name FROM msdb.dbo.sysmail_profile;
 
@@ -230,6 +258,7 @@ PRINT N'Mail profile    : ' + @MailProfile;
 PRINT N'Category        : ' + @CategoryName;
 PRINT N'Owner           : ' + @OwnerLogin;
 PRINT N'Recipients      : ' + @Recipients;
+PRINT N'Failure alert   : ' + ISNULL(@SrcOperator, N'(none)');
 PRINT N'Start time      : ' + STUFF(STUFF(RIGHT('000000'
         + CAST(@ActiveStartTime AS varchar(6)), 6), 5, 0, ':'), 3, 0, ':');
 
@@ -377,7 +406,9 @@ BEGIN TRY
          @description           = N'Emails the SCMG coding worklist (PatientVisit rows for VisitOwnerMId 153669, 153695, 153696) as a CSV attachment. Modeled on EnsembleVisitOwner.',
          @category_name         = @CategoryName,
          @owner_login_name      = @OwnerLogin,
-         @notify_level_eventlog = 2,          -- log on failure
+         @notify_level_eventlog = @SrcNotifyEventlog,
+         @notify_level_email    = @SrcNotifyEmail,      -- inherited: 2 = on failure
+         @notify_email_operator_name = @SrcOperator,    -- inherited: e.g. DBA
          @job_id                = @JobId OUTPUT;
 
     EXEC msdb.dbo.sp_add_jobstep
