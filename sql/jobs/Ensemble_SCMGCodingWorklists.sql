@@ -53,6 +53,7 @@ DECLARE @DatabaseName   sysname  = NULL,    -- e.g. N'Intergy'
 ==============================================================================*/
 DECLARE @SrcCmd       nvarchar(max),
         @SrcDb        sysname,
+        @SrcQueryDb   sysname,
         @SrcProfile   sysname,
         @SrcCategory  sysname,
         @SrcOwner     sysname,
@@ -100,7 +101,27 @@ BEGIN
                 SET @SrcProfile = SUBSTRING(@SrcCmd, @q1 + 1, @q2 - @q1 - 1);
         END
     END
+
+    /*-- same for @execute_query_database. A mail job's step usually runs in
+         msdb and names the real application database here, so this is the
+         more reliable source of the two.                                    --*/
+    SET @q1 = CHARINDEX(N'@execute_query_database', @SrcCmd);
+    IF @q1 > 0
+    BEGIN
+        SET @q1 = CHARINDEX(N'''', @SrcCmd, @q1);
+        IF @q1 > 0
+        BEGIN
+            SET @q2 = CHARINDEX(N'''', @SrcCmd, @q1 + 1);
+            IF @q2 > @q1
+                SET @SrcQueryDb = SUBSTRING(@SrcCmd, @q1 + 1, @q2 - @q1 - 1);
+        END
+    END
 END
+
+/* the step's own database is only meaningful if it is a real user database */
+IF @SrcDb IN (N'msdb', N'master', N'model', N'tempdb') SET @SrcDb = NULL;
+IF @SrcQueryDb IS NOT NULL AND DB_ID(@SrcQueryDb) IS NULL SET @SrcQueryDb = NULL;
+SET @SrcDb = COALESCE(@SrcQueryDb, @SrcDb);
 
 /* the source may use a variable rather than a literal - only trust a real one */
 IF @SrcProfile IS NOT NULL
@@ -118,6 +139,33 @@ SELECT  @DatabaseName = COALESCE(@DatabaseName, @SrcDb),
         @MailProfile  = COALESCE(@MailProfile,  @SrcProfile),
         @CategoryName = COALESCE(@CategoryName, @SrcCategory, N'[Uncategorized (Local)]'),
         @OwnerLogin   = COALESCE(@OwnerLogin,   @SrcOwner,    SUSER_SNAME());
+
+/*---- last resort: find the database that actually holds these tables ------*/
+DECLARE @Candidates TABLE (name sysname);
+
+IF @DatabaseName IS NULL
+BEGIN
+    INSERT INTO @Candidates (name)
+    SELECT  d.name
+    FROM    sys.databases d
+    WHERE   d.state = 0              -- ONLINE
+      AND   d.database_id > 4        -- skip system databases
+      AND   OBJECT_ID(QUOTENAME(d.name) + N'.dbo.PatientVisit')   IS NOT NULL
+      AND   OBJECT_ID(QUOTENAME(d.name) + N'.dbo.PatientProfile') IS NOT NULL
+      AND   OBJECT_ID(QUOTENAME(d.name) + N'.dbo.MedLists')       IS NOT NULL;
+
+    IF (SELECT COUNT(*) FROM @Candidates) = 1
+    BEGIN
+        SELECT @DatabaseName = name FROM @Candidates;
+        PRINT N'Target database auto-detected by schema: ' + @DatabaseName;
+    END
+    ELSE IF (SELECT COUNT(*) FROM @Candidates) > 1
+    BEGIN
+        PRINT N'Several databases contain PatientVisit/PatientProfile/MedLists.';
+        PRINT N'Pick one and set @DatabaseName in the OVERRIDES block:';
+        SELECT name AS [Candidate databases] FROM @Candidates ORDER BY name;
+    END
+END
 
 /*---- schedule: copy the source job's, else default to daily 06:00 ---------*/
 DECLARE @FreqType              int = 4,   -- 4 = daily
