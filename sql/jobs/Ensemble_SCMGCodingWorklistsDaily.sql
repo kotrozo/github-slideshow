@@ -1,7 +1,7 @@
 /*==============================================================================
   Ensemble_SCMGCodingWorklistsDaily.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "Ensemble_SCMGCodingWorklistsDaily"
+  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklistsDaily"
 
   Runs DAILY at 04:00 and emails the SCMG coding worklist as a dated .csv.
 
@@ -9,11 +9,7 @@
   ------------
   To : Kristie Stuber, Holly Aguilar, Heather Russell, Jessica Apolito
        (all @ensemblehp.com)
-  Cc : Dan Krchmar, and you
-
-  The two Cc addresses are placeholders. The script REFUSES to run until they
-  are filled in - this report goes to an external vendor domain, so it should
-  not send with the Cc list half-configured.
+  Cc : Daniel.Krchmar@stclair.org, joe.kotrozo@stclair.org
 
   Ready to run as-is. Target database is ED; mail profile, owner, category
   and the failure-alert operator are inherited from JK_EnsembleVisitOwner.
@@ -30,7 +26,7 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName         sysname = N'Ensemble_SCMGCodingWorklistsDaily',
+DECLARE @JobName         sysname = N'JK_Ensemble_SCMGCodingWorklistsDaily',
         @SourceJob       sysname = N'JK_EnsembleVisitOwner',
         @JobEnabled      tinyint = 1,
         @ReplaceExisting bit     = 0,   -- 1 = drop + recreate if it exists
@@ -368,7 +364,7 @@ GO
       SELECT TOP (5) h.run_date, h.run_time, h.run_status, h.message
       FROM   msdb.dbo.sysjobhistory h
       JOIN   msdb.dbo.sysjobs j ON j.job_id = h.job_id
-      WHERE  j.name = 'Ensemble_SCMGCodingWorklistsDaily'
+      WHERE  j.name = 'JK_Ensemble_SCMGCodingWorklistsDaily'
       ORDER  BY h.run_date DESC, h.run_time DESC;
 
   Confirm the mail actually left the server:

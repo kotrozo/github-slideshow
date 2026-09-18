@@ -1,7 +1,7 @@
 /*==============================================================================
   Ensemble_SCMGCodingWorklistsDaily_SSIS.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "Ensemble_SCMGCodingWorklistsDaily"
+  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklistsDaily"
   Clones  : JK_EnsembleVisitOwner (SSIS job, \SSISDB\EDJobs\EnsembleVisitOwner)
 
   Same clone-the-step-command approach as Ensemble_SCMGCodingWorklists_SSIS.sql,
@@ -32,7 +32,7 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName         sysname = N'Ensemble_SCMGCodingWorklistsDaily',
+DECLARE @JobName         sysname = N'JK_Ensemble_SCMGCodingWorklistsDaily',
         @SourceJob       sysname = N'JK_EnsembleVisitOwner',
         @OldProjectName  sysname = N'EnsembleVisitOwner',                -- text to replace
         @NewProjectName  sysname = N'Ensemble_SCMGCodingWorklistsDaily', -- replacement

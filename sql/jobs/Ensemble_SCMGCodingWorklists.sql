@@ -1,7 +1,7 @@
 /*==============================================================================
   Ensemble_SCMGCodingWorklists.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "Ensemble_SCMGCodingWorklists"
+  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklists"
   Modeled : on the existing job "JK_EnsembleVisitOwner"
 
   What it does
@@ -42,7 +42,7 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName        sysname       = N'Ensemble_SCMGCodingWorklists',
+DECLARE @JobName        sysname       = N'JK_Ensemble_SCMGCodingWorklists',
         @SourceJob      sysname       = N'JK_EnsembleVisitOwner',
         @Recipients     nvarchar(max) = N'kotrozo@gmail.com',
         @JobEnabled     tinyint       = 1,   -- 1 = job runs on schedule
@@ -455,13 +455,13 @@ GO
   POST-CREATE
 
   Run it now:
-      EXEC msdb.dbo.sp_start_job @job_name = N'Ensemble_SCMGCodingWorklists';
+      EXEC msdb.dbo.sp_start_job @job_name = N'JK_Ensemble_SCMGCodingWorklists';
 
   Check the outcome:
       SELECT TOP (5) h.run_date, h.run_time, h.run_status, h.message
       FROM   msdb.dbo.sysjobhistory h
       JOIN   msdb.dbo.sysjobs j ON j.job_id = h.job_id
-      WHERE  j.name = 'Ensemble_SCMGCodingWorklists'
+      WHERE  j.name = 'JK_Ensemble_SCMGCodingWorklists'
       ORDER  BY h.run_date DESC, h.run_time DESC;
 
   Check the mail actually went out:

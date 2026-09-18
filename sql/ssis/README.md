@@ -4,10 +4,10 @@
 Both new reports are that same package with a different query, so the path is
 clone → edit → deploy → create job. Run it twice, once per report.
 
-| Job | Project / package | Runs | Query | Goes to |
+| Agent job | SSIS project / package | Runs | Query | Goes to |
 |---|---|---|---|---|
-| `Ensemble_SCMGCodingWorklists` | `Ensemble_SCMGCodingWorklists` | weekly, Mon 04:00 | `query.sql` | you |
-| `Ensemble_SCMGCodingWorklistsDaily` | `Ensemble_SCMGCodingWorklistsDaily` | daily 04:00 | `query_daily_coding_worklist.sql` | Ensemble coding team |
+| `JK_Ensemble_SCMGCodingWorklists` | `Ensemble_SCMGCodingWorklists` | weekly, Mon 04:00 | `query.sql` | you |
+| `JK_Ensemble_SCMGCodingWorklistsDaily` | `Ensemble_SCMGCodingWorklistsDaily` | daily 04:00 | `query_daily_coding_worklist.sql` | Ensemble coding team |
 
 The two queries share a `WHERE` clause and differ in their column list and sort:
 the daily one drops `CurrentCarrier` / `CurrentPICarrierId`, keeps
@@ -24,6 +24,10 @@ first scheduled run, and check `msdb.dbo.sysmail_event_log` — a blocked relay
 shows up there while the job still reports success.
 
 The target database is **ED**.
+
+Note the naming split, which follows `JK_EnsembleVisitOwner` →
+`\SSISDB\EDJobs\EnsembleVisitOwner`: the **Agent job** carries the `JK_`
+prefix, the **SSIS project and package** do not.
 
 ## What the source job looks like
 
@@ -138,7 +142,7 @@ daily script does not — it sets daily 04:00 explicitly.
 Then test:
 
 ```sql
-EXEC msdb.dbo.sp_start_job @job_name = N'Ensemble_SCMGCodingWorklistsDaily';
+EXEC msdb.dbo.sp_start_job @job_name = N'JK_Ensemble_SCMGCodingWorklistsDaily';
 ```
 
 For the daily report, test it before the first scheduled run: create it with

@@ -1,7 +1,7 @@
 /*==============================================================================
   Ensemble_SCMGCodingWorklists_SSIS.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "Ensemble_SCMGCodingWorklists"
+  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklists"
   Clones  : JK_EnsembleVisitOwner (SSIS job, \SSISDB\EDJobs\EnsembleVisitOwner)
 
   This does NOT invent a job step. It reads JK_EnsembleVisitOwner's actual
@@ -26,7 +26,7 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName         sysname = N'Ensemble_SCMGCodingWorklists',
+DECLARE @JobName         sysname = N'JK_Ensemble_SCMGCodingWorklists',
         @SourceJob       sysname = N'JK_EnsembleVisitOwner',
         @OldProjectName  sysname = N'EnsembleVisitOwner',           -- text to replace
         @NewProjectName  sysname = N'Ensemble_SCMGCodingWorklists', -- replacement
