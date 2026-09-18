@@ -2,9 +2,9 @@
   _inspect_EnsembleVisitOwner.sql
   Server : schcent20db01
   Purpose: Dump the definition of the existing SQL Agent job "EnsembleVisitOwner"
-           so the new job (Ensemble_SCMGCodingWorklists) can be built to match.
+           so the new job (EnsembleSCMGCodingWorklists) can be built to match.
 
-  Run this FIRST. Read the output, then run Ensemble_SCMGCodingWorklists.sql.
+  Run this FIRST. Read the output, then run EnsembleSCMGCodingWorklists.sql.
   Read-only - this script changes nothing.
 ==============================================================================*/
 

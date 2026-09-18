@@ -6,8 +6,8 @@ clone → edit → deploy → create job. Run it twice, once per report.
 
 | Agent job | SSIS project / package | Runs | Query | Goes to |
 |---|---|---|---|---|
-| `JK_Ensemble_SCMGCodingWorklists` | `Ensemble_SCMGCodingWorklists` | weekly, Mon 04:00 | `query.sql` | you |
-| `JK_Ensemble_SCMGCodingWorklistsDaily` | `Ensemble_SCMGCodingWorklistsDaily` | daily 04:00 | `query_daily_coding_worklist.sql` | Ensemble coding team |
+| `JK_EnsembleSCMGCodingWorklists` | `EnsembleSCMGCodingWorklists` | weekly, Mon 04:00 | `query.sql` | you |
+| `JK_EnsembleSCMGCodingWorklistsDaily` | `EnsembleSCMGCodingWorklistsDaily` | daily 04:00 | `query_daily_coding_worklist.sql` | Ensemble coding team |
 
 The two queries share a `WHERE` clause and differ in their column list and sort:
 the daily one drops `CurrentCarrier` / `CurrentPICarrierId`, keeps
@@ -79,13 +79,13 @@ for this job, since renaming the project properly means editing the manifest.
 ## 2. Clone and rename
 
 Save the **project** and the **package** under the same name — either
-`Ensemble_SCMGCodingWorklists` or `Ensemble_SCMGCodingWorklistsDaily`
+`EnsembleSCMGCodingWorklists` or `EnsembleSCMGCodingWorklistsDaily`
 depending on which report you're building.
 
 Both names matter: the job script builds its step command by substituting
 `EnsembleVisitOwner` → the new name in the source job's command, so the
 deployed path must end up as, for the daily report,
-`\SSISDB\EDJobs\Ensemble_SCMGCodingWorklistsDaily\Ensemble_SCMGCodingWorklistsDaily.dtsx`.
+`\SSISDB\EDJobs\EnsembleSCMGCodingWorklistsDaily\EnsembleSCMGCodingWorklistsDaily.dtsx`.
 
 If you name them differently, set `@NewProjectName` in the matching job script
 to suit. Each script verifies the package exists in the catalog before creating
@@ -127,8 +127,8 @@ Deploy the project to the **EDJobs** folder, alongside the original.
 ## 5. Create the Agent job
 
 ```
-../jobs/Ensemble_SCMGCodingWorklists_SSIS.sql        -- weekly, Mon 04:00
-../jobs/Ensemble_SCMGCodingWorklistsDaily_SSIS.sql   -- daily 04:00
+../jobs/EnsembleSCMGCodingWorklists_SSIS.sql        -- weekly, Mon 04:00
+../jobs/EnsembleSCMGCodingWorklistsDaily_SSIS.sql   -- daily 04:00
 ```
 
 Run the matching one on `schcent20db01`. Each clones the source job's step
@@ -142,7 +142,7 @@ daily script does not — it sets daily 04:00 explicitly.
 Then test:
 
 ```sql
-EXEC msdb.dbo.sp_start_job @job_name = N'JK_Ensemble_SCMGCodingWorklistsDaily';
+EXEC msdb.dbo.sp_start_job @job_name = N'JK_EnsembleSCMGCodingWorklistsDaily';
 ```
 
 For the daily report, test it before the first scheduled run: create it with
@@ -156,8 +156,8 @@ the file looks right, then set the real list and enable.
 Both reports also exist as self-contained T-SQL jobs that do the same work with
 `sp_send_dbmail` — no package, no deployment:
 
-- `../jobs/Ensemble_SCMGCodingWorklists.sql`
-- `../jobs/Ensemble_SCMGCodingWorklistsDaily.sql` (recipients already filled in)
+- `../jobs/EnsembleSCMGCodingWorklists.sql`
+- `../jobs/EnsembleSCMGCodingWorklistsDaily.sql` (recipients already filled in)
 
 These are **not** the chosen approach and are kept only as a fallback; they
 break the EDJobs convention the other Ensemble reports follow. They are

@@ -1,7 +1,7 @@
 /*==============================================================================
-  Ensemble_SCMGCodingWorklistsDaily.sql
+  EnsembleSCMGCodingWorklistsDaily.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklistsDaily"
+  Creates : SQL Agent job "JK_EnsembleSCMGCodingWorklistsDaily"
 
   Runs DAILY at 04:00 and emails the SCMG coding worklist as a dated .csv.
 
@@ -26,7 +26,7 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName         sysname = N'JK_Ensemble_SCMGCodingWorklistsDaily',
+DECLARE @JobName         sysname = N'JK_EnsembleSCMGCodingWorklistsDaily',
         @SourceJob       sysname = N'JK_EnsembleVisitOwner',
         @JobEnabled      tinyint = 1,
         @ReplaceExisting bit     = 0,   -- 1 = drop + recreate if it exists
@@ -332,7 +332,7 @@ BEGIN TRY
 
     EXEC msdb.dbo.sp_add_jobschedule
          @job_id            = @JobId,
-         @name              = N'schEnsemble_SCMGCodingWorklistsDaily',
+         @name              = N'schEnsembleSCMGCodingWorklistsDaily',
          @enabled           = 1,
          @freq_type         = 4,            -- daily
          @freq_interval     = 1,            -- every 1 day
@@ -364,7 +364,7 @@ GO
       SELECT TOP (5) h.run_date, h.run_time, h.run_status, h.message
       FROM   msdb.dbo.sysjobhistory h
       JOIN   msdb.dbo.sysjobs j ON j.job_id = h.job_id
-      WHERE  j.name = 'JK_Ensemble_SCMGCodingWorklistsDaily'
+      WHERE  j.name = 'JK_EnsembleSCMGCodingWorklistsDaily'
       ORDER  BY h.run_date DESC, h.run_time DESC;
 
   Confirm the mail actually left the server:

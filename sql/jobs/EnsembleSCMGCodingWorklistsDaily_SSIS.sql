@@ -1,21 +1,27 @@
 /*==============================================================================
-  Ensemble_SCMGCodingWorklists_SSIS.sql
+  EnsembleSCMGCodingWorklistsDaily_SSIS.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklists"
+  Creates : SQL Agent job "JK_EnsembleSCMGCodingWorklistsDaily"
   Clones  : JK_EnsembleVisitOwner (SSIS job, \SSISDB\EDJobs\EnsembleVisitOwner)
 
-  This does NOT invent a job step. It reads JK_EnsembleVisitOwner's actual
-  /ISSERVER step command and substitutes the project/package name, so every
-  other switch - server, LOGGING_LEVEL, SYNCHRONIZED, CALLERINFO, REPORTING -
-  is identical to the job that already works. Category, owner, failure-alert
-  operator and schedule are inherited the same way.
+  Same clone-the-step-command approach as EnsembleSCMGCodingWorklists_SSIS.sql,
+  with one difference: the schedule is NOT inherited. This report runs DAILY at
+  04:00, where the source job runs weekly on Mondays.
+
+  Deliberately a separate script rather than a mode flag on the weekly one -
+  running the wrong file cannot silently produce the wrong job.
 
   PREREQUISITE
   ------------
-  The SSIS project must already be deployed to the catalog. See
-  sql/ssis/README.md for cloning the existing project and changing the WHERE
-  clause. This script REFUSES to create a job pointing at a package that is
-  not in SSISDB, so run it after deploying.
+  The SSIS project must already be deployed to \SSISDB\EDJobs. See
+  sql/ssis/README.md - this is the second of two packages, the one with the
+  daily query and the Ensemble distribution list. This script REFUSES to
+  create a job pointing at a package that is not in the catalog.
+
+  Recipients live in the PACKAGE, not here:
+      To : Kristie.Stuber@ensemblehp.com, Holly.Aguilar@ensemblehp.com,
+           Heather.Russell@ensemblehp.com, Jessica.Apolito@ensemblehp.com
+      Cc : Daniel.Krchmar@stclair.org, joe.kotrozo@stclair.org
 ==============================================================================*/
 
 USE [msdb];
@@ -26,27 +32,29 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName         sysname = N'JK_Ensemble_SCMGCodingWorklists',
+DECLARE @JobName         sysname = N'JK_EnsembleSCMGCodingWorklistsDaily',
         @SourceJob       sysname = N'JK_EnsembleVisitOwner',
-        @OldProjectName  sysname = N'EnsembleVisitOwner',           -- text to replace
-        @NewProjectName  sysname = N'Ensemble_SCMGCodingWorklists', -- replacement
+        @OldProjectName  sysname = N'EnsembleVisitOwner',                -- text to replace
+        @NewProjectName  sysname = N'EnsembleSCMGCodingWorklistsDaily', -- replacement
         @JobEnabled      tinyint = 1,
         @ReplaceExisting bit     = 0;   -- 1 = drop + recreate if it exists
+
+/*---- schedule: DAILY at 04:00 (not inherited) ----------------------------*/
+DECLARE @ActiveStartTime int = 40000;   -- HHMMSS
 
 /*==============================================================================
   READ THE SOURCE JOB
 ==============================================================================*/
-DECLARE @SrcCmd        nvarchar(max),
-        @SrcSubsystem  nvarchar(40),
-        @SrcStepDb     sysname,
-        @SrcStepName   sysname,
-        @SrcProxyId    int,
-        @SrcOnSuccess  int,
-        @SrcOnFail     int,
-        @SrcRetries    int,
-        @SrcCategory   sysname,
-        @SrcOwner      sysname,
-        @SrcOperator   sysname,
+DECLARE @SrcCmd       nvarchar(max),
+        @SrcSubsystem nvarchar(40),
+        @SrcStepDb    sysname,
+        @SrcProxyId   int,
+        @SrcOnSuccess int,
+        @SrcOnFail    int,
+        @SrcRetries   int,
+        @SrcCategory  sysname,
+        @SrcOwner     sysname,
+        @SrcOperator  sysname,
         @SrcNotifyEmail    tinyint,
         @SrcNotifyEventlog tinyint;
 
@@ -68,7 +76,6 @@ SELECT TOP (1)
         @SrcCmd       = s.command,
         @SrcSubsystem = s.subsystem,
         @SrcStepDb    = s.database_name,
-        @SrcStepName  = s.step_name,
         @SrcProxyId   = s.proxy_id,
         @SrcOnSuccess = s.on_success_action,
         @SrcOnFail    = s.on_fail_action,
@@ -121,12 +128,11 @@ PRINT N'---------------------------';
 
 /*==============================================================================
   VERIFY THE PACKAGE IS ACTUALLY DEPLOYED
-  Parses \SSISDB\<folder>\<project>\<package>.dtsx out of the new command.
 ==============================================================================*/
-DECLARE @Path      nvarchar(1000),
-        @Folder    sysname,
-        @Project   sysname,
-        @Package   sysname,
+DECLARE @Path    nvarchar(1000),
+        @Folder  sysname,
+        @Project sysname,
+        @Package sysname,
         @p1 int, @p2 int, @s1 int, @s2 int;
 
 SET @p1 = CHARINDEX(N'\SSISDB\', @NewCmd);
@@ -173,35 +179,10 @@ BEGIN
     RETURN;
 END
 
-/*==============================================================================
-  SCHEDULE - inherited from the source job
-==============================================================================*/
-DECLARE @FreqType             int = 8,   -- weekly
-        @FreqInterval         int = 2,   -- Monday
-        @FreqSubdayType       int = 1,
-        @FreqSubdayInterval   int = 0,
-        @FreqRelativeInterval int = 0,
-        @FreqRecurrenceFactor int = 1,
-        @ActiveStartTime      int = 40000;  -- 04:00:00
-
-SELECT TOP (1)
-        @FreqType             = sch.freq_type,
-        @FreqInterval         = sch.freq_interval,
-        @FreqSubdayType       = sch.freq_subday_type,
-        @FreqSubdayInterval   = sch.freq_subday_interval,
-        @FreqRelativeInterval = sch.freq_relative_interval,
-        @FreqRecurrenceFactor = sch.freq_recurrence_factor,
-        @ActiveStartTime      = sch.active_start_time
-FROM    msdb.dbo.sysjobs         j
-JOIN    msdb.dbo.sysjobschedules js  ON js.job_id       = j.job_id
-JOIN    msdb.dbo.sysschedules    sch ON sch.schedule_id = js.schedule_id
-WHERE   j.name = @SourceJob
-ORDER BY sch.schedule_id;
-
 PRINT N'Category        : ' + @SrcCategory;
 PRINT N'Owner           : ' + @SrcOwner;
 PRINT N'Failure alert   : ' + ISNULL(@SrcOperator, N'(none)');
-PRINT N'Start time      : ' + STUFF(STUFF(RIGHT('000000'
+PRINT N'Schedule        : daily at ' + STUFF(STUFF(RIGHT('000000'
         + CAST(@ActiveStartTime AS varchar(6)), 6), 5, 0, ':'), 3, 0, ':');
 
 /*==============================================================================
@@ -227,7 +208,7 @@ BEGIN TRY
     EXEC msdb.dbo.sp_add_job
          @job_name                   = @JobName,
          @enabled                    = @JobEnabled,
-         @description                = N'Emails the SCMG coding worklist (PatientVisit rows for VisitOwnerMId 153669, 153695, 153696). Cloned from JK_EnsembleVisitOwner.',
+         @description                = N'Daily 04:00. Runs the SCMG coding worklist SSIS package and emails the file to the Ensemble coding team. Cloned from JK_EnsembleVisitOwner.',
          @category_name              = @SrcCategory,
          @owner_login_name           = @SrcOwner,
          @notify_level_eventlog      = @SrcNotifyEventlog,
@@ -237,7 +218,7 @@ BEGIN TRY
 
     EXEC msdb.dbo.sp_add_jobstep
          @job_id            = @JobId,
-         @step_name         = N'stepEnsemble_SCMGCodingWorklists',
+         @step_name         = N'stepEnsembleSCMGCodingWorklistsDaily',
          @step_id           = 1,
          @subsystem         = @SrcSubsystem,     -- SSIS
          @database_name     = @SrcStepDb,        -- as on the source step
@@ -250,16 +231,13 @@ BEGIN TRY
     EXEC msdb.dbo.sp_update_job @job_id = @JobId, @start_step_id = 1;
 
     EXEC msdb.dbo.sp_add_jobschedule
-         @job_id                 = @JobId,
-         @name                   = N'schEnsemble_SCMGCodingWorklists',
-         @enabled                = 1,
-         @freq_type              = @FreqType,
-         @freq_interval          = @FreqInterval,
-         @freq_subday_type       = @FreqSubdayType,
-         @freq_subday_interval   = @FreqSubdayInterval,
-         @freq_relative_interval = @FreqRelativeInterval,
-         @freq_recurrence_factor = @FreqRecurrenceFactor,
-         @active_start_time      = @ActiveStartTime;
+         @job_id            = @JobId,
+         @name              = N'schEnsembleSCMGCodingWorklistsDaily',
+         @enabled           = 1,
+         @freq_type         = 4,            -- daily
+         @freq_interval     = 1,            -- every 1 day
+         @freq_subday_type  = 1,            -- at the specified time
+         @active_start_time = @ActiveStartTime;
 
     EXEC msdb.dbo.sp_add_jobserver @job_id = @JobId, @server_name = N'(local)';
 

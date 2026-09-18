@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Used to get a copy of EnsembleVisitOwner so it can be cloned into
-    Ensemble_SCMGCodingWorklists with a different WHERE clause.
+    EnsembleSCMGCodingWorklists with a different WHERE clause.
 
     Equivalent GUI path, if you'd rather not run this:
         SSMS -> Integration Services Catalogs -> SSISDB -> EDJobs -> Projects

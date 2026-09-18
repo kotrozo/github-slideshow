@@ -47,13 +47,13 @@ against `\SSISDB\EDJobs\EnsembleVisitOwner`.
 
 | Agent job | SSIS project / package | Schedule |
 |---|---|---|
-| `JK_Ensemble_SCMGCodingWorklists` | `Ensemble_SCMGCodingWorklists` | weekly, Mon 04:00 |
-| `JK_Ensemble_SCMGCodingWorklistsDaily` | `Ensemble_SCMGCodingWorklistsDaily` | daily 04:00 |
+| `JK_EnsembleSCMGCodingWorklists` | `EnsembleSCMGCodingWorklists` | weekly, Mon 04:00 |
+| `JK_EnsembleSCMGCodingWorklistsDaily` | `EnsembleSCMGCodingWorklistsDaily` | daily 04:00 |
 
-**Ask me before creating anything**: my other jobs are `JK_EnsembleVisitOwner`
-and `JK_EnsembleOfficeProviderCode`, with no underscore after `Ensemble`. I may
-want `JK_EnsembleSCMGCodingWorklists` / `JK_EnsembleSCMGCodingWorklistsDaily`
-instead. Confirm which, then use it consistently.
+These names are settled - no underscore after `Ensemble`, matching my other
+jobs (`JK_EnsembleVisitOwner`, `JK_EnsembleOfficeProviderCode`). Use them
+exactly as written. The SSIS project and package must match `@NewProjectName`
+in the job scripts, or the deployment check will reject the job.
 
 ## Report 1 — weekly (Mondays 04:00), to me only
 
@@ -128,7 +128,7 @@ step command and substitute the project name, so `/SERVER`, `LOGGING_LEVEL`,
 `SYNCHRONIZED`, `CALLERINFO` and `REPORTING` match what already works, and they
 refuse to create a job whose package isn't in the catalog.
 
-`sql/jobs/Ensemble_SCMGCodingWorklists*.sql` (no `_SSIS`) are self-contained
+`sql/jobs/EnsembleSCMGCodingWorklists*.sql` (no `_SSIS`) are self-contained
 T-SQL alternatives using `sp_send_dbmail` — no package needed. They're a
 fallback but they run today, so they're useful for proving the query and the
 mail relay first.
@@ -329,9 +329,9 @@ Read-only. Dumps the model job so you can verify the details above.
   _inspect_EnsembleVisitOwner.sql
   Server : schcent20db01
   Purpose: Dump the definition of the existing SQL Agent job "EnsembleVisitOwner"
-           so the new job (Ensemble_SCMGCodingWorklists) can be built to match.
+           so the new job (EnsembleSCMGCodingWorklists) can be built to match.
 
-  Run this FIRST. Read the output, then run Ensemble_SCMGCodingWorklists.sql.
+  Run this FIRST. Read the output, then run EnsembleSCMGCodingWorklists.sql.
   Read-only - this script changes nothing.
 ==============================================================================*/
 
@@ -447,15 +447,15 @@ ORDER BY h.run_date DESC, h.run_time DESC;
 GO
 ```
 
-## `sql/jobs/Ensemble_SCMGCodingWorklistsDaily.sql`
+## `sql/jobs/EnsembleSCMGCodingWorklistsDaily.sql`
 
 T-SQL daily job. Self-contained, runs today.
 
 ```sql
 /*==============================================================================
-  Ensemble_SCMGCodingWorklistsDaily.sql
+  EnsembleSCMGCodingWorklistsDaily.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklistsDaily"
+  Creates : SQL Agent job "JK_EnsembleSCMGCodingWorklistsDaily"
 
   Runs DAILY at 04:00 and emails the SCMG coding worklist as a dated .csv.
 
@@ -480,7 +480,7 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName         sysname = N'JK_Ensemble_SCMGCodingWorklistsDaily',
+DECLARE @JobName         sysname = N'JK_EnsembleSCMGCodingWorklistsDaily',
         @SourceJob       sysname = N'JK_EnsembleVisitOwner',
         @JobEnabled      tinyint = 1,
         @ReplaceExisting bit     = 0,   -- 1 = drop + recreate if it exists
@@ -786,7 +786,7 @@ BEGIN TRY
 
     EXEC msdb.dbo.sp_add_jobschedule
          @job_id            = @JobId,
-         @name              = N'schEnsemble_SCMGCodingWorklistsDaily',
+         @name              = N'schEnsembleSCMGCodingWorklistsDaily',
          @enabled           = 1,
          @freq_type         = 4,            -- daily
          @freq_interval     = 1,            -- every 1 day
@@ -818,7 +818,7 @@ GO
       SELECT TOP (5) h.run_date, h.run_time, h.run_status, h.message
       FROM   msdb.dbo.sysjobhistory h
       JOIN   msdb.dbo.sysjobs j ON j.job_id = h.job_id
-      WHERE  j.name = 'JK_Ensemble_SCMGCodingWorklistsDaily'
+      WHERE  j.name = 'JK_EnsembleSCMGCodingWorklistsDaily'
       ORDER  BY h.run_date DESC, h.run_time DESC;
 
   Confirm the mail actually left the server:
@@ -831,15 +831,15 @@ GO
 ==============================================================================*/
 ```
 
-## `sql/jobs/Ensemble_SCMGCodingWorklists.sql`
+## `sql/jobs/EnsembleSCMGCodingWorklists.sql`
 
 T-SQL weekly job. Self-contained, runs today.
 
 ```sql
 /*==============================================================================
-  Ensemble_SCMGCodingWorklists.sql
+  EnsembleSCMGCodingWorklists.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklists"
+  Creates : SQL Agent job "JK_EnsembleSCMGCodingWorklists"
   Modeled : on the existing job "JK_EnsembleVisitOwner"
 
   What it does
@@ -880,7 +880,7 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName        sysname       = N'JK_Ensemble_SCMGCodingWorklists',
+DECLARE @JobName        sysname       = N'JK_EnsembleSCMGCodingWorklists',
         @SourceJob      sysname       = N'JK_EnsembleVisitOwner',
         @Recipients     nvarchar(max) = N'kotrozo@gmail.com',
         @JobEnabled     tinyint       = 1,   -- 1 = job runs on schedule
@@ -1266,7 +1266,7 @@ BEGIN TRY
 
     EXEC msdb.dbo.sp_add_jobschedule
          @job_id                 = @JobId,
-         @name                   = N'Ensemble_SCMGCodingWorklists_Schedule',
+         @name                   = N'EnsembleSCMGCodingWorklists_Schedule',
          @enabled                = 1,
          @freq_type              = @FreqType,
          @freq_interval          = @FreqInterval,
@@ -1293,13 +1293,13 @@ GO
   POST-CREATE
 
   Run it now:
-      EXEC msdb.dbo.sp_start_job @job_name = N'JK_Ensemble_SCMGCodingWorklists';
+      EXEC msdb.dbo.sp_start_job @job_name = N'JK_EnsembleSCMGCodingWorklists';
 
   Check the outcome:
       SELECT TOP (5) h.run_date, h.run_time, h.run_status, h.message
       FROM   msdb.dbo.sysjobhistory h
       JOIN   msdb.dbo.sysjobs j ON j.job_id = h.job_id
-      WHERE  j.name = 'JK_Ensemble_SCMGCodingWorklists'
+      WHERE  j.name = 'JK_EnsembleSCMGCodingWorklists'
       ORDER  BY h.run_date DESC, h.run_time DESC;
 
   Check the mail actually went out:
@@ -1321,18 +1321,18 @@ GO
 ==============================================================================*/
 ```
 
-## `sql/jobs/Ensemble_SCMGCodingWorklistsDaily_SSIS.sql`
+## `sql/jobs/EnsembleSCMGCodingWorklistsDaily_SSIS.sql`
 
 SSIS daily job. Needs the package deployed first.
 
 ```sql
 /*==============================================================================
-  Ensemble_SCMGCodingWorklistsDaily_SSIS.sql
+  EnsembleSCMGCodingWorklistsDaily_SSIS.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklistsDaily"
+  Creates : SQL Agent job "JK_EnsembleSCMGCodingWorklistsDaily"
   Clones  : JK_EnsembleVisitOwner (SSIS job, \SSISDB\EDJobs\EnsembleVisitOwner)
 
-  Same clone-the-step-command approach as Ensemble_SCMGCodingWorklists_SSIS.sql,
+  Same clone-the-step-command approach as EnsembleSCMGCodingWorklists_SSIS.sql,
   with one difference: the schedule is NOT inherited. This report runs DAILY at
   04:00, where the source job runs weekly on Mondays.
 
@@ -1360,10 +1360,10 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName         sysname = N'JK_Ensemble_SCMGCodingWorklistsDaily',
+DECLARE @JobName         sysname = N'JK_EnsembleSCMGCodingWorklistsDaily',
         @SourceJob       sysname = N'JK_EnsembleVisitOwner',
         @OldProjectName  sysname = N'EnsembleVisitOwner',                -- text to replace
-        @NewProjectName  sysname = N'Ensemble_SCMGCodingWorklistsDaily', -- replacement
+        @NewProjectName  sysname = N'EnsembleSCMGCodingWorklistsDaily', -- replacement
         @JobEnabled      tinyint = 1,
         @ReplaceExisting bit     = 0;   -- 1 = drop + recreate if it exists
 
@@ -1546,7 +1546,7 @@ BEGIN TRY
 
     EXEC msdb.dbo.sp_add_jobstep
          @job_id            = @JobId,
-         @step_name         = N'stepEnsemble_SCMGCodingWorklistsDaily',
+         @step_name         = N'stepEnsembleSCMGCodingWorklistsDaily',
          @step_id           = 1,
          @subsystem         = @SrcSubsystem,     -- SSIS
          @database_name     = @SrcStepDb,        -- as on the source step
@@ -1560,7 +1560,7 @@ BEGIN TRY
 
     EXEC msdb.dbo.sp_add_jobschedule
          @job_id            = @JobId,
-         @name              = N'schEnsemble_SCMGCodingWorklistsDaily',
+         @name              = N'schEnsembleSCMGCodingWorklistsDaily',
          @enabled           = 1,
          @freq_type         = 4,            -- daily
          @freq_interval     = 1,            -- every 1 day
@@ -1581,15 +1581,15 @@ END CATCH
 GO
 ```
 
-## `sql/jobs/Ensemble_SCMGCodingWorklists_SSIS.sql`
+## `sql/jobs/EnsembleSCMGCodingWorklists_SSIS.sql`
 
 SSIS weekly job. Needs the package deployed first.
 
 ```sql
 /*==============================================================================
-  Ensemble_SCMGCodingWorklists_SSIS.sql
+  EnsembleSCMGCodingWorklists_SSIS.sql
   Server  : schcent20db01
-  Creates : SQL Agent job "JK_Ensemble_SCMGCodingWorklists"
+  Creates : SQL Agent job "JK_EnsembleSCMGCodingWorklists"
   Clones  : JK_EnsembleVisitOwner (SSIS job, \SSISDB\EDJobs\EnsembleVisitOwner)
 
   This does NOT invent a job step. It reads JK_EnsembleVisitOwner's actual
@@ -1614,10 +1614,10 @@ SET NOCOUNT ON;
 /*==============================================================================
   SETTINGS
 ==============================================================================*/
-DECLARE @JobName         sysname = N'JK_Ensemble_SCMGCodingWorklists',
+DECLARE @JobName         sysname = N'JK_EnsembleSCMGCodingWorklists',
         @SourceJob       sysname = N'JK_EnsembleVisitOwner',
         @OldProjectName  sysname = N'EnsembleVisitOwner',           -- text to replace
-        @NewProjectName  sysname = N'Ensemble_SCMGCodingWorklists', -- replacement
+        @NewProjectName  sysname = N'EnsembleSCMGCodingWorklists', -- replacement
         @JobEnabled      tinyint = 1,
         @ReplaceExisting bit     = 0;   -- 1 = drop + recreate if it exists
 
@@ -1825,7 +1825,7 @@ BEGIN TRY
 
     EXEC msdb.dbo.sp_add_jobstep
          @job_id            = @JobId,
-         @step_name         = N'stepEnsemble_SCMGCodingWorklists',
+         @step_name         = N'stepEnsembleSCMGCodingWorklists',
          @step_id           = 1,
          @subsystem         = @SrcSubsystem,     -- SSIS
          @database_name     = @SrcStepDb,        -- as on the source step
@@ -1839,7 +1839,7 @@ BEGIN TRY
 
     EXEC msdb.dbo.sp_add_jobschedule
          @job_id                 = @JobId,
-         @name                   = N'schEnsemble_SCMGCodingWorklists',
+         @name                   = N'schEnsembleSCMGCodingWorklists',
          @enabled                = 1,
          @freq_type              = @FreqType,
          @freq_interval          = @FreqInterval,
@@ -1972,7 +1972,7 @@ Optional: exports the existing project as an .ispac for backup.
 
 .DESCRIPTION
     Used to get a copy of EnsembleVisitOwner so it can be cloned into
-    Ensemble_SCMGCodingWorklists with a different WHERE clause.
+    EnsembleSCMGCodingWorklists with a different WHERE clause.
 
     Equivalent GUI path, if you'd rather not run this:
         SSMS -> Integration Services Catalogs -> SSISDB -> EDJobs -> Projects
