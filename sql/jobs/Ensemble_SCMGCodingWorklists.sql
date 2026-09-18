@@ -51,8 +51,8 @@ DECLARE @JobName        sysname       = N'Ensemble_SCMGCodingWorklists',
                                              --     (see NOTE at bottom)
 
 /*---- OVERRIDES: leave NULL to inherit from EnsembleVisitOwner --------------*/
-DECLARE @DatabaseName   sysname  = NULL,    -- e.g. N'Intergy'
-        @MailProfile    sysname  = NULL,    -- e.g. N'SQLMail'
+DECLARE @DatabaseName   sysname  = N'ED',
+        @MailProfile    sysname  = NULL,    -- e.g. N'SQLMail Alerts'
         @CategoryName   sysname  = NULL,
         @OwnerLogin     sysname  = NULL,
         @ScheduleTime   int      = NULL;    -- HHMMSS, e.g. 60000 = 06:00:00

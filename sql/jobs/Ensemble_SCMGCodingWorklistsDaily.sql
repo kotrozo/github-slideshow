@@ -15,22 +15,11 @@
   are filled in - this report goes to an external vendor domain, so it should
   not send with the Cc list half-configured.
 
-  Before you run it
-  -----------------
-  1. Fill in @CcDanKrchmar and @CcSelf below.
-  2. @DatabaseName: several databases on this instance contain
-     PatientVisit/PatientProfile/MedLists, so it cannot be auto-detected.
-     Set it explicitly. To list the candidates:
+  Ready to run as-is. Target database is ED; mail profile, owner, category
+  and the failure-alert operator are inherited from JK_EnsembleVisitOwner.
 
-        SELECT d.name
-        FROM   sys.databases d
-        WHERE  d.state = 0 AND d.database_id > 4
-          AND  OBJECT_ID(QUOTENAME(d.name) + '.dbo.PatientVisit')   IS NOT NULL
-          AND  OBJECT_ID(QUOTENAME(d.name) + '.dbo.PatientProfile') IS NOT NULL
-          AND  OBJECT_ID(QUOTENAME(d.name) + '.dbo.MedLists')       IS NOT NULL;
-
-  Mail profile, owner, category and the failure-alert operator are inherited
-  from JK_EnsembleVisitOwner.
+  Test before the first scheduled run - see the POST-CREATE block at the
+  bottom. This sends to an external domain.
 ==============================================================================*/
 
 USE [msdb];
@@ -48,9 +37,9 @@ DECLARE @JobName         sysname = N'Ensemble_SCMGCodingWorklistsDaily',
         @UseCsvSafeQuery bit     = 1;   -- 1 = quote/escape text columns
 
 /*---- REQUIRED ------------------------------------------------------------*/
-DECLARE @DatabaseName sysname = NULL,   -- e.g. N'Intergy' - see header
-        @CcDanKrchmar sysname = N'<<SET_DAN_KRCHMAR_EMAIL>>',
-        @CcSelf       sysname = N'<<SET_YOUR_EMAIL>>';
+DECLARE @DatabaseName sysname = N'ED',
+        @CcDanKrchmar sysname = N'Daniel.Krchmar@stclair.org',
+        @CcSelf       sysname = N'joe.kotrozo@stclair.org';
 
 /*---- OPTIONAL OVERRIDES: leave NULL to inherit ---------------------------*/
 DECLARE @MailProfile  sysname = NULL,
